@@ -29,3 +29,7 @@ PSM_SEASON_LITERAL_REGEX = [
     (r'^(.*)(stagione)\ (uno|due|tre|quattro|cinque|sei|sette|'
      'otto|nove|dieci).*$', 1, 3),
 ]
+
+PSM_PASSWORD_REGEX = [
+    (r'^.*(password).*:\ *(.*)$', 2)
+]

@@ -24,6 +24,7 @@ class PsManiaco(object):
     tree = ''
     raw_items = []
     season = 0
+    password = ''
 
     def __init__(self, pfn):
         self.page_file_name = pfn
@@ -85,6 +86,9 @@ class PsManiaco(object):
     def getContent(self):
         return(self.content)
 
+    def getPassword(self):
+        return(self.password)
+
     def getRawItemsName(self):
         items = [x['text'] for x in self.raw_items]
         return(items)
@@ -101,12 +105,19 @@ class PsManiaco(object):
         for regex in settings.PSM_SEASON_NUMERIC_REGEX:
             r = re.match(regex[0], title, flags=re.I)
             if r:
-                self.title = r.group(regex[1])
+                self.title = r.group(regex[1]).strip()
                 self.season = r.group(regex[2])
                 break
-        logging.warning('no regex matched "%s"' % title)
+        if self.season == 0:
+            logging.warning('no regex matched "%s"' % title)
 
     def init_content(self):
-        self.raw_content
-        content = self.raw_content.split('\n')
+        content = unicode(self.raw_content).split("\n")
         self.content = content
+        for row in content:
+            for regex in settings.PSM_PASSWORD_REGEX:
+                r = re.match(regex[0], row, re.I)
+                if r:
+                    self.password = r.group(regex[1])
+                    logging.info('password found')
+                    break

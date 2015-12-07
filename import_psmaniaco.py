@@ -8,6 +8,5 @@ for f in files:
     p = PsManiaco(f)
     print p.getTitle()
     print p.getSeason()
-    p = p.getRawContent()
-    help(p)
-    print '-------------'
+    print p.getPassword()
+    print p.getRawItems()[-1]['text']
