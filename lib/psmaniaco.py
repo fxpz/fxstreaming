@@ -1,7 +1,18 @@
 import settings
-
 from lxml import html
-import urllib
+import urllib2
+import re
+import sys
+import logging
+
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+root.addHandler(ch)
 
 
 class PsManiaco(object):
@@ -12,13 +23,23 @@ class PsManiaco(object):
     title = ''
     tree = ''
     raw_items = []
+    season = 0
 
     def __init__(self, pfn):
         self.page_file_name = pfn
         url = 'file://{0}/{1}'.format(settings.PSM_PATH_PAGE_FILES, pfn)
-        self.content = urllib.urlopen(url).read()
-        self.tree = html.fromstring(self.content)
+        self.tree = html.parse(urllib2.urlopen(url))
+        logging.info('open %s' % pfn)
+        logging.debug('url %s' % url)
+        self.init_logging()
         self.init_data()
+
+    def init_logging(self):
+        if settings.LOGFILE == '':
+            logging.basicConfig(level=settings.LOGLEVEL)
+        else:
+            logging.basicConfig(filename=settings.LOGDIR+settings.LOGFILE,
+                                level=settings.LOGLEVEL)
 
     def init_data(self):
         self.fetch_links()
@@ -35,32 +56,34 @@ class PsManiaco(object):
         self.raw_items = mega_link
 
     def fetch_content(self):
-        description_found = True
-        content = self.tree.xpath('{0}/{1}'.format(
-            settings.PSM_XPATH_CONTENT, '/text()'))
-        if not any('Titolo' in s for s in content):
-            content = self.tree.xpath('{0}'.format(
-                settings.PSM_XPATH_CONTENT))[0].text_content()
-            description_found = False
-        self.description_found = description_found
-        self.raw_content = content
+        content = self.tree.findall(settings.PSM_XPATH_CONTENT)[0]
+        for br in content.xpath("*//br"):
+            br.tail = "\n" + br.tail if br.tail else "\n"
+        self.raw_content = content.text_content()
+        self.init_content()
 
     def fetch_title(self):
-        title = self.tree.xpath('{0}/{1}'.format(
-            settings.PSM_XPATH_TITLE, '/text()'))
-        self.raw_title = title
+        title = self.tree.xpath(settings.PSM_XPATH_TITLE)[0]
+        self.raw_title = title.text_content()
+        self.init_title()
 
     def getRawContent(self):
-        if self.description_found:
-            return(self.raw_content)
-        else:
-            return([])
+        return(self.raw_content)
 
     def getRawItems(self):
         return(self.raw_items)
 
     def getRawTitle(self):
         return(self.raw_title)
+
+    def getTitle(self):
+        return(self.title)
+
+    def getSeason(self):
+        return(self.season)
+
+    def getContent(self):
+        return(self.content)
 
     def getRawItemsName(self):
         items = [x['text'] for x in self.raw_items]
@@ -69,3 +92,21 @@ class PsManiaco(object):
     def getRawItemsUrl(self):
         items = [x['href'] for x in self.raw_items]
         return(items)
+
+    def init_title(self):
+        title = self.raw_title
+        for regex in settings.PSM_TITLE_FILTER_OUT:
+            title = re.sub(regex[0], regex[1], title, flags=re.I)
+
+        for regex in settings.PSM_SEASON_NUMERIC_REGEX:
+            r = re.match(regex[0], title, flags=re.I)
+            if r:
+                self.title = r.group(regex[1])
+                self.season = r.group(regex[2])
+                break
+        logging.warning('no regex matched "%s"' % title)
+
+    def init_content(self):
+        self.raw_content
+        content = self.raw_content.split('\n')
+        self.content = content
