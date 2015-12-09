@@ -1,4 +1,4 @@
-import settings
+from settings import *
 from lxml import html
 import urllib2
 import re
@@ -29,18 +29,18 @@ class PsManiaco(object):
     def __init__(self, pfn):
         self.init_logging()
         self.page_file_name = pfn
-        url = 'file://{0}/{1}'.format(settings.PSM_PATH_PAGE_FILES, pfn)
+        url = 'file://{0}/{1}'.format(PSM_PATH_PAGE_FILES, pfn)
         logging.info('open %s' % pfn)
         logging.debug('url %s' % url)
         self.tree = html.parse(urllib2.urlopen(url))
         self.init_data()
 
     def init_logging(self):
-        if settings.LOGFILE == '':
-            logging.basicConfig(level=settings.LOGLEVEL)
+        if LOGFILE == '':
+            logging.basicConfig(level=LOGLEVEL)
         else:
-            logging.basicConfig(filename=settings.LOGDIR+settings.LOGFILE,
-                                level=settings.LOGLEVEL)
+            logging.basicConfig(filename=LOGDIR+LOGFILE,
+                                level=LOGLEVEL)
 
     def init_data(self):
         self.fetch_links()
@@ -48,7 +48,7 @@ class PsManiaco(object):
         self.fetch_title()
 
     def fetch_links(self):
-        links = self.tree.xpath(settings.PSM_XPATH_HREF)
+        links = self.tree.xpath(PSM_XPATH_HREF)
         mega_link = []
         for link in links:
             if link.attrib['href'].startswith('https://mega.'):
@@ -57,14 +57,14 @@ class PsManiaco(object):
         self.raw_items = mega_link
 
     def fetch_content(self):
-        content = self.tree.findall(settings.PSM_XPATH_CONTENT)[0]
+        content = self.tree.findall(PSM_XPATH_CONTENT)[0]
         for br in content.xpath("*//br"):
             br.tail = "\n" + br.tail if br.tail else "\n"
         self.raw_content = content.text_content()
         self.init_content()
 
     def fetch_title(self):
-        title = self.tree.xpath(settings.PSM_XPATH_TITLE)[0]
+        title = self.tree.xpath(PSM_XPATH_TITLE)[0]
         self.raw_title = title.text_content()
         self.init_title()
 
@@ -99,10 +99,10 @@ class PsManiaco(object):
 
     def init_title(self):
         title = self.raw_title
-        for regex in settings.PSM_TITLE_FILTER_OUT:
+        for regex in PSM_TITLE_FILTER_OUT:
             title = re.sub(regex[0], regex[1], title, flags=re.I)
 
-        for regex in settings.PSM_SEASON_NUMERIC_REGEX:
+        for regex in PSM_SEASON_NUMERIC_REGEX:
             r = re.match(regex[0], title, flags=re.I)
             if r:
                 self.title = r.group(regex[1]).strip()
@@ -115,7 +115,7 @@ class PsManiaco(object):
         content = unicode(self.raw_content).split("\n")
         self.content = content
         for row in content:
-            for regex in settings.PSM_PASSWORD_REGEX:
+            for regex in PSM_PASSWORD_REGEX:
                 r = re.match(regex[0], row, re.I)
                 if r:
                     self.password = r.group(regex[1])
