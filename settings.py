@@ -1,12 +1,19 @@
 import logging
 
+# PATH
+ROOT_PATH = '/home/fxstreaming/fxstreaming'
+FILES_PATH = '%s/files' % ROOT_PATH 
+
 # LOGGING
 LOGDIR = '/tmp/'
 LOGFILE = 'fxlog'
 LOGLEVEL = logging.DEBUG
 
+# PATTERN
+QUERY_PATTERN = r'^([^\*]+)\*+([^\*]+)\*+([^\*]+)$'
+
 # PSMANIACO
-PSM_PATH_PAGE_FILES = '/Users/baky/fxstreaming/files/psmaniaco'
+PSM_PATH_PAGE_FILES = '%s/psmaniaco' % FILES_PATH
 
 PSM_XPATH_HREF = '//a[@href]'
 PSM_XPATH_CONTENT = '//table[@class="color"]'
@@ -33,3 +40,7 @@ PSM_SEASON_LITERAL_REGEX = [
 PSM_PASSWORD_REGEX = [
     (r'^.*(password).*:\ *(.*)$', 2)
 ]
+
+CN_PATH_JSON_FILES = '%s/corsaronero' % FILES_PATH
+CN_QUERY_URL = 'http://ilcorsaronero.info/torrent-ita/15'
+CN_XPATH_RESULTS_ROWS = '//div[@id="left"][@class="left"]/table/tr/td[2]/table/tr[starts-with(@class,"odd")]'

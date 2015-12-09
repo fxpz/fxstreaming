@@ -27,12 +27,12 @@ class PsManiaco(object):
     password = ''
 
     def __init__(self, pfn):
+        self.init_logging()
         self.page_file_name = pfn
         url = 'file://{0}/{1}'.format(settings.PSM_PATH_PAGE_FILES, pfn)
-        self.tree = html.parse(urllib2.urlopen(url))
         logging.info('open %s' % pfn)
         logging.debug('url %s' % url)
-        self.init_logging()
+        self.tree = html.parse(urllib2.urlopen(url))
         self.init_data()
 
     def init_logging(self):

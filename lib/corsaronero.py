@@ -4,6 +4,8 @@ import sys
 import re
 import settings
 import urllib2
+import humanfriendly
+import time
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -24,23 +26,52 @@ class CorsaroNero(object):
     ep = 0
 
     def __init__(self, j):
+	self.init_logging()
         self.title = j['name']
         self.season = j['season']
         self.pattern = j['pattern']
         self.query = j['query']
+	logging.info('find show: %s %s' % (self.title, self.season))
+
+    def init_logging(self):
+        if settings.LOGFILE == '':
+            logging.basicConfig(level=settings.LOGLEVEL)
+        else:
+            logging.basicConfig(filename=settings.LOGDIR+settings.LOGFILE,
+                                level=settings.LOGLEVEL)
 
     def find(self):
         url = self.build_url()
+	logging.debug('calling url %s' % url)
         tree = html.parse(urllib2.urlopen(url))
-        out = self.parse_result(tree)
-        print out
+        results = self.parse_result(tree)
+       	print results 
 
     def parse_result(self, tree):
-        rows = tree.findall('//tr[starts-with(@class, "odd")]')
-        return(rows)
+        rows = tree.xpath(settings.CN_XPATH_RESULTS_ROWS)
+	logging.debug('found %d rows' % len(rows))
+	results = []
+	for row in rows:
+	    result = {}
+	    tds = row.getchildren()
+	    a = tds[1].find('.//a[@href]')
+	    result['text'] = a.text_content()
+	    result['link'] = a.attrib['href']
+	    result['size'] = humanfriendly.parse_size(tds[2].text_content())
+	    result['data'] = time.strptime(tds[4].text_content(),"%d.%m.%y")
+	    result['seeds'] = int(tds[5].text_content())
+	    result['leech'] = int(tds[6].text_content())
+	    item_tree = html.parse(urllib2.urlopen(result['link']))
+            links = item_tree.xpath('//a[@href]')
+            for link in links:
+                if link.attrib['href'].startswith('magnet:?'):
+	            result['torrent'] = link.attrib['href']
+	    results.append(result)
+        return(results)
 
     def build_url(self):
         self.ep += 1
+	logging.warning('finding ep %s' % self.ep)
         pagesearch = re.sub(settings.QUERY_PATTERN,
                             r'\g<1>%02d\g<2>%02d\g<3>' % (
                                 self.season, self.ep),
