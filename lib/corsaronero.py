@@ -49,6 +49,7 @@ class CorsaroNero(object):
             res = self.find_ep()
             search = res['continue']
         logging.info('%s %s searching finished' % (self.title, self.season))
+        return(self.founds)
 
     def find_ep(self):
         url = self.build_url()
@@ -101,14 +102,17 @@ class CorsaroNero(object):
                         result['ep_end'] = result['ep_start']
                         if 'end' in regex:
                             result['ep_end'] = r.group('end')
-                            ep_found = int(result['ep_end']) - int(result['ep_start'])
+                            ep_found = (int(result['ep_end']) -
+                                        int(result['ep_start']))
                             if ep_found == 0:
                                 ep_found = 1
                         break
                 result['text'] = a.text_content()
                 result['link'] = a.attrib['href']
-                result['size'] = humanfriendly.parse_size(tds[2].text_content()) / ep_found
-                result['data'] = time.strptime(tds[4].text_content(), "%d.%m.%y")
+                size = humanfriendly.parse_size(tds[2].text_content())
+                result['size'] = size / ep_found
+                result['data'] = time.strptime(tds[4].text_content(),
+                                               "%d.%m.%y")
                 result['seeds'] = int(tds[5].text_content())
                 result['leech'] = int(tds[6].text_content())
                 item_tree = html.parse(urllib2.urlopen(result['link']))
@@ -124,7 +128,8 @@ class CorsaroNero(object):
     def filter_results(self, items):
         filtered = [k for k in items if int(k['seeds']) >= SEEDS_THRESHOLD]
         if len(filtered) == 0:
-            logging.warning('ep %d not found enough seeds. Use full results' % self.ep)
+            logging.warning('ep %d not found enough seeds. Use full results' %
+                            self.ep)
             filtered = items
         ordered = sorted(filtered, key=lambda k: k['size'], reverse=True)
         return(ordered[0])
