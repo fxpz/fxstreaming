@@ -8,9 +8,9 @@ import humanfriendly
 import time
 
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(logging.INFO)
 ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
@@ -25,6 +25,7 @@ class CorsaroNero(object):
     query = ''
     ep = 0
     tryed = 0
+    founds = []
 
     def __init__(self, j):
         self.init_logging()
@@ -32,7 +33,8 @@ class CorsaroNero(object):
         self.season = j['season']
         self.pattern = j['pattern']
         self.query = j['query']
-        logging.info('find show: %s %s' % (self.title, self.season))
+        logging.info('creadet object for show: %s %s' % (self.title,
+                     self.season))
 
     def init_logging(self):
         if LOGFILE == '':
@@ -42,25 +44,44 @@ class CorsaroNero(object):
                                 level=LOGLEVEL)
 
     def find(self):
+        search = True
+        while search:
+            res = self.find_ep()
+            search = res['continue']
+        logging.info('%s %s searching finished' % (self.title, self.season))
+
+    def find_ep(self):
         url = self.build_url()
         logging.debug('calling url %s' % url)
-        tree = html.parse(urllib2.urlopen(url))
+        try:
+            url_content = urllib2.urlopen(url)
+        except urllib2.HTTPError:
+            logging.error('invalid url')
+            return({'found': False, 'continue': False})
+
+        tree = html.parse(url_content)
         results = self.parse_result(tree)
-        if results:
+        if len(results) > 0:
             self.tryed = 0
             result = self.filter_results(results)
-            if result:
-                self.ep = int(result['ep_end'])
-                print result
-                self.find()
+            self.ep = int(result['ep_end'])
+            logging.info('found ep from %d to %d' %
+                         (int(result['ep_start']), self.ep))
+            self.founds.append(result)
+            return({'found': True, 'continue': True})
         else:
-            if self.ep > 1 and self.tryed >= RETRY_NORES:
-                self.ep += 1
+            if self.ep > 1 and self.tryed <= RETRY_NORES:
+                logging.warning('ep %d not found. Try to find ep %d' %
+                                (self.ep, self.ep + 1))
                 self.tryed += 1
-                self.find()
+                return({'found': False, 'continue': True})
             else:
-                logging.info('no more result found')
-                return(False)
+                if self.ep == 1:
+                    logging.error('Ep 1 not found. Stop searching')
+                else:
+                    logging.warning('Tried %d times. Stop searching' %
+                                    self.tryed)
+                return({'found': False, 'continue': False})
 
     def parse_result(self, tree):
         rows = tree.xpath(CN_XPATH_RESULTS_ROWS)
@@ -98,18 +119,19 @@ class CorsaroNero(object):
                 results.append(result)
             return(results)
         else:
-            return(False)
+            return([])
 
     def filter_results(self, items):
-        filtered = [k for k in items if int(k['seeds']) > SEEDS_THRESHOLD]
+        filtered = [k for k in items if int(k['seeds']) >= SEEDS_THRESHOLD]
         if len(filtered) == 0:
+            logging.warning('ep %d not found enough seeds. Use full results' % self.ep)
             filtered = items
-        ordered = sorted(items, key=lambda k: k['size'], reverse=True)
+        ordered = sorted(filtered, key=lambda k: k['size'], reverse=True)
         return(ordered[0])
 
     def build_url(self):
         self.ep += 1
-        logging.warning('finding ep %s' % self.ep)
+        logging.debug('building url for S%sE%s' % (self.season, self.ep))
         pagesearch = re.sub(QUERY_PATTERN,
                             r'\g<1>%02d\g<2>%02d\g<3>' % (
                                 self.season, self.ep),

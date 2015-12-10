@@ -7,7 +7,7 @@ FILES_PATH = '%s/files' % ROOT_PATH
 # LOGGING
 LOGDIR = '/tmp/'
 LOGFILE = 'fxlog'
-LOGLEVEL = logging.DEBUG
+LOGLEVEL = logging.INFO
 
 # PATTERN
 QUERY_PATTERN = r'^([^\*]+)\*+([^\*]+)\*+([^\*]+)$'
@@ -16,7 +16,7 @@ EP_PATTERN_REGEX = [
     r'^\D+(?P<season>\d+)\D+(?P<start>\d+)\D+.*$'
 ]
 
-SEEDS_THRESHOLD = 100
+SEEDS_THRESHOLD = 50
 RETRY_NORES = 2
 
 try:
